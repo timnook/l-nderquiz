@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#07090f">
+  <meta name="description" content="Quiz mit allen 194 Ländern der Welt – Flaggen, Hauptstädte, offline als iPhone App">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GeoQuiz">
+  <!-- Inline SVG icon as apple-touch-icon via link trick -->
+  <title>GeoQuiz – Länder der Welt</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–bg:       #07090f;
+–surf:     #0f1320;
+–surf2:    #161b2e;
+–border:   rgba(255,255,255,0.07);
+–green:    #4fffb0;
+–red:      #ff6b6b;
+–yellow:   #ffd93d;
+–blue:     #4db8ff;
+–text:     #f0f4ff;
+–muted:    #5a6380;
+–muted2:   #2a3050;
+–r:        18px;
+–sat: env(safe-area-inset-top, 0px);
+–sab: env(safe-area-inset-bottom, 0px);
+}
+
+html, body { height: 100%; overflow: hidden; background: var(–bg); }
+
+body {
+color: var(–text);
+font-family: ‘DM Sans’, system-ui, sans-serif;
+-webkit-font-smoothing: antialiased;
+-webkit-tap-highlight-color: transparent;
+user-select: none;
+overscroll-behavior: none;
+}
+
+/* ── SCREENS ── */
+.screen {
+position: fixed; inset: 0;
+display: flex; flex-direction: column;
+padding-top: calc(var(–sat) + 52px);
+padding-bottom: var(–sab);
+opacity: 0; pointer-events: none;
+transform: translateX(24px);
+transition: opacity .25s ease, transform .25s ease;
+overflow: hidden;
+background: var(–bg);
+}
+.screen.active  { opacity: 1; pointer-events: all; transform: none; }
+.screen.out     { opacity: 0; transform: translateX(-24px); }
+
+/* ── TYPOGRAPHY ── */
+.t-xl  { font-family:‘Syne’,sans-serif; font-size:clamp(38px,10vw,52px); font-weight:800; line-height:1; letter-spacing:-1.5px; }
+.t-lg  { font-family:‘Syne’,sans-serif; font-size:26px; font-weight:800; letter-spacing:-0.3px; }
+.t-acc { background:linear-gradient(135deg,#fff 20%,var(–green)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.label { font-size:11px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(–muted); }
+.back  { display:inline-flex; align-items:center; gap:3px; color:var(–green); font-size:16px; font-weight:500; cursor:pointer; margin-bottom:16px; padding:6px 0; }
+
+/* ── BUTTONS ── */
+.btn {
+width:100%; padding:17px 20px; border:none; border-radius:var(–r);
+font-family:‘DM Sans’,sans-serif; font-size:16px; font-weight:600;
+cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+transition:transform .1s,opacity .1s; -webkit-appearance:none;
+}
+.btn:active { transform:scale(.97); opacity:.85; }
+.btn-p  { background:var(–green); color:#000; font-family:‘Syne’,sans-serif; font-weight:700; }
+.btn-s  { background:var(–surf); color:var(–text); border:1px solid var(–border); }
+.btn-g  { background:transparent; color:var(–muted); font-size:14px; }
+.btn-ok { background:rgba(79,255,176,.1); color:var(–green); border:1px solid rgba(79,255,176,.25); font-weight:700; }
+.btn-no { background:rgba(255,107,107,.1); color:var(–red); border:1px solid rgba(255,107,107,.22); font-weight:700; }
+.btn-d  { background:rgba(255,107,107,.1); color:var(–red); border:1px solid rgba(255,107,107,.2); }
+
+/* ── NOISE ── */
+body::after {
+content:’’; position:fixed; inset:0; pointer-events:none; z-index:9999;
+background-image:url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 200 200’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=’.85’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23n)’ opacity=’.03’/%3E%3C/svg%3E”);
+}
+
+/* ════ HOME ════ */
+#s-home { background:radial-gradient(ellipse at 50% -5%,rgba(79,255,176,.09) 0%,transparent 55%), var(–bg); }
+.home-body  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 28px; gap:8px; }
+.globe      { font-size:72px; animation:float 5s ease-in-out infinite; filter:drop-shadow(0 0 36px rgba(79,255,176,.35)); }
+@keyframes float { 0%,100%{transform:translateY(0) rotate(0)} 40%{transform:translateY(-10px) rotate(2deg)} 70%{transform:translateY(-4px) rotate(-1deg)} }
+.home-sub   { font-size:14px; color:var(–muted); font-weight:300; letter-spacing:.04em; margin-bottom:6px; }
+.stats-row  { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.stat-pill  { background:var(–surf); border:1px solid var(–border); border-radius:30px; padding:8px 14px; font-size:13px; display:flex; align-items:center; gap:6px; }
+.stat-num   { font-family:‘Syne’,sans-serif; font-weight:700; color:var(–green); }
+.home-foot  { padding:20px 20px calc(20px + var(–sab)); display:flex; flex-direction:column; gap:10px; }
+
+/* ════ REGION ════ */
+.sh         { padding:0 20px 10px; flex-shrink:0; }
+.region-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 16px 16px; display:flex; flex-direction:column; gap:9px; scrollbar-width:none; }
+.region-scroll::-webkit-scrollbar{display:none}
+
+.rc {
+background:var(–surf); border:1.5px solid var(–border); border-radius:var(–r);
+padding:13px 15px; display:flex; align-items:center; gap:12px; cursor:pointer;
+transition:border-color .2s,background .2s,transform .1s;
+}
+.rc:active{transform:scale(.98)}
+.rc.sel   { border-color:var(–green); background:rgba(79,255,176,.05); }
+.rc.world { border-color:rgba(255,217,61,.28); background:rgba(255,217,61,.04); }
+.rc.world.sel { border-color:var(–yellow); background:rgba(255,217,61,.08); }
+.rc-emoji { font-size:32px; flex-shrink:0; }
+.rc-info  { flex:1; min-width:0; }
+.rc-name  { font-family:‘Syne’,sans-serif; font-size:14px; font-weight:700; margin-bottom:2px; }
+.rc-sub   { font-size:11px; color:var(–muted); margin-bottom:5px; }
+.rc-bar   { height:3px; background:rgba(255,255,255,.05); border-radius:2px; overflow:hidden; }
+.rc-fill  { height:100%; border-radius:2px; background:var(–green); }
+.rc-chk   { width:24px; height:24px; border-radius:50%; border:2px solid var(–muted2); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; color:transparent; transition:all .2s; }
+.rc.sel   .rc-chk { background:var(–green); border-color:var(–green); color:#000; }
+.rc.world.sel .rc-chk { background:var(–yellow); border-color:var(–yellow); }
+
+.mode-row  { padding:8px 16px 2px; flex-shrink:0; }
+.mode-chips{ display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.mode-chips::-webkit-scrollbar{display:none}
+.chip { flex-shrink:0; padding:7px 13px; border-radius:30px; font-size:13px; font-weight:500; border:1.5px solid var(–border); background:var(–surf); color:var(–muted); cursor:pointer; white-space:nowrap; transition:all .2s; }
+.chip.sel { border-color:var(–green); background:rgba(79,255,176,.08); color:var(–green); }
+
+.region-foot { padding:12px 16px calc(14px + var(–sab)); flex-shrink:0; }
+
+/* ════ QUIZ ════ */
+.quiz-top   { padding:0 20px 8px; flex-shrink:0; }
+.quiz-row   { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.badge      { background:rgba(79,255,176,.1); border:1px solid rgba(79,255,176,.2); color:var(–green); padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; }
+.q-counter  { font-family:‘Syne’,sans-serif; font-size:13px; color:var(–muted); }
+.q-counter strong { color:var(–text); }
+.prog-track { height:4px; background:rgba(255,255,255,.05); border-radius:2px; overflow:hidden; }
+.prog-fill  { height:100%; background:linear-gradient(90deg,var(–green),var(–blue)); border-radius:2px; transition:width .5s cubic-bezier(.4,0,.2,1); }
+
+.quiz-body  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 24px; gap:12px; overflow:hidden; }
+.q-prompt   { font-size:13px; color:var(–muted); letter-spacing:.06em; text-transform:uppercase; text-align:center; }
+
+.flag-box   {
+width:min(290px,84vw); aspect-ratio:3/2; border-radius:16px;
+display:flex; align-items:center; justify-content:center;
+font-size:clamp(68px,20vw,105px); line-height:1;
+background:var(–surf); box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06);
+animation:flagIn .38s cubic-bezier(.34,1.56,.64,1);
+overflow:hidden;
+}
+.name-box   { font-family:‘Syne’,sans-serif; font-size:clamp(26px,7vw,38px); font-weight:800; text-align:center; animation:flagIn .3s ease; }
+@keyframes flagIn { from{transform:scale(.78) rotateY(-18deg);opacity:0} to{transform:none;opacity:1} }
+
+.hint-row   { display:flex; align-items:center; gap:8px; font-size:12px; color:var(–muted); }
+.hint-btn   { background:var(–surf); border:1px solid var(–border); color:var(–yellow); padding:5px 12px; border-radius:14px; font-size:12px; font-weight:600; cursor:pointer; flex-shrink:0; }
+.hint-txt   { color:var(–yellow); font-weight:500; font-size:13px; animation:fadeUp .3s ease; display:none; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+.ans-area   { padding:0 16px calc(18px + var(–sab)); flex-shrink:0; }
+.inp-wrap   { position:relative; margin-bottom:8px; }
+.ans-inp    {
+width:100%; padding:16px 52px 16px 18px;
+background:var(–surf); border:2px solid var(–border); border-radius:var(–r);
+color:var(–text); font-family:‘DM Sans’,sans-serif; font-size:17px;
+outline:none; -webkit-appearance:none; transition:border-color .2s;
+}
+.ans-inp:focus       { border-color:rgba(79,255,176,.45); }
+.ans-inp.ok          { border-color:var(–green); background:rgba(79,255,176,.04); }
+.ans-inp.wrong       { border-color:var(–red);   background:rgba(255,107,107,.04); animation:shake .38s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+.sub-btn    { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:40px; height:40px; background:var(–green); border:none; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; transition:transform .1s; color:#000; font-weight:700; }
+.sub-btn:active { transform:translateY(-50%) scale(.9); }
+
+.ac-list    { background:var(–surf2); border:1px solid var(–border); border-radius:15px; overflow:hidden; max-height:155px; overflow-y:auto; display:none; scrollbar-width:none; }
+.ac-list::-webkit-scrollbar{display:none}
+.ac-item    { padding:11px 15px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(–border); cursor:pointer; transition:background .15s; }
+.ac-item:last-child { border-bottom:none; }
+.ac-item:active,.ac-item:hover { background:rgba(79,255,176,.06); }
+.ac-flag    { font-size:22px; flex-shrink:0; }
+.ac-name    { flex:1; font-size:15px; }
+.ac-cap     { font-size:11px; color:var(–muted); }
+
+/* ════ RESULT ════ */
+#s-result   { justify-content:space-between; }
+.res-glow-g { background:radial-gradient(ellipse at 50% 0%,rgba(79,255,176,.12) 0%,transparent 55%),var(–bg); }
+.res-glow-r { background:radial-gradient(ellipse at 50% 0%,rgba(255,107,107,.10) 0%,transparent 55%),var(–bg); }
+.res-body   { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 20px; gap:14px; }
+.res-icon   { font-size:66px; animation:pop .42s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pop { from{transform:scale(0) rotate(-10deg);opacity:0} to{transform:none;opacity:1} }
+.res-label  { font-family:‘Syne’,sans-serif; font-size:32px; font-weight:800; }
+.res-label.g{ color:var(–green); }
+.res-label.r{ color:var(–red); }
+
+.country-card { width:100%; background:var(–surf); border:1px solid var(–border); border-radius:22px; padding:18px; display:flex; gap:14px; align-items:center; animation:slideUp .38s ease .08s both; }
+@keyframes slideUp { from{transform:translateY(18px);opacity:0} to{transform:none;opacity:1} }
+.cc-flag    { font-size:54px; flex-shrink:0; line-height:1; }
+.cc-name    { font-family:‘Syne’,sans-serif; font-size:19px; font-weight:800; margin-bottom:7px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cc-fact    { font-size:13px; color:var(–muted); display:flex; align-items:center; gap:6px; margin-top:5px; }
+.cc-fact strong { color:var(–text); font-weight:500; }
+
+.wrong-box  { width:100%; background:rgba(255,107,107,.06); border:1px solid rgba(255,107,107,.15); border-radius:13px; padding:12px 15px; font-size:14px; color:var(–muted); animation:slideUp .38s ease .13s both; }
+.streak-badge { background:rgba(255,217,61,.1); border:1px solid rgba(255,217,61,.25); color:var(–yellow); padding:9px 18px; border-radius:20px; font-family:‘Syne’,sans-serif; font-size:14px; font-weight:700; display:flex; align-items:center; gap:6px; animation:slideUp .38s ease .18s both; }
+.res-foot   { padding:0 16px calc(20px + var(–sab)); display:flex; flex-direction:column; gap:10px; width:100%; flex-shrink:0; }
+
+/* ════ LEARN ════ */
+.learn-card { flex:1; margin:0 14px; background:var(–surf); border:1px solid var(–border); border-radius:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px 22px; gap:16px; }
+.learn-flag { font-size:clamp(76px,24vw,114px); line-height:1; animation:flagIn .4s cubic-bezier(.34,1.56,.64,1); }
+.learn-name { font-family:‘Syne’,sans-serif; font-size:clamp(22px,6vw,32px); font-weight:800; text-align:center; animation:fadeUp .3s ease .1s both; }
+.learn-facts{ display:flex; flex-direction:column; gap:9px; width:100%; animation:fadeUp .3s ease .18s both; }
+.lf-row     { background:var(–surf2); border:1px solid var(–border); border-radius:13px; padding:11px 15px; font-size:14px; display:flex; align-items:center; gap:10px; }
+.lf-icon    { font-size:20px; flex-shrink:0; }
+.lf-lbl     { font-size:11px; color:var(–muted); margin-bottom:2px; }
+.lf-val     { font-weight:600; }
+.learn-foot { padding:12px 14px calc(14px + var(–sab)); display:flex; gap:10px; flex-shrink:0; }
+.learn-foot .btn { flex:1; }
+
+/* ════ PROGRESS ════ */
+.prog-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 14px 14px; display:flex; flex-direction:column; gap:11px; scrollbar-width:none; }
+.prog-scroll::-webkit-scrollbar{display:none}
+
+.overall-card { background:linear-gradient(135deg,rgba(79,255,176,.08),rgba(77,184,255,.05)); border:1px solid rgba(79,255,176,.14); border-radius:var(–r); padding:16px; display:flex; align-items:center; gap:14px; }
+.o-ring       { width:62px; height:62px; border-radius:50%; background:conic-gradient(var(–green) var(–p,0%),var(–surf2) 0); display:flex; align-items:center; justify-content:center; flex-shrink:0; position:relative; }
+.o-ring::after{ content:’’; position:absolute; inset:6px; border-radius:50%; background:var(–bg); }
+.o-num        { position:relative; z-index:1; font-family:‘Syne’,sans-serif; font-size:13px; font-weight:800; color:var(–green); }
+.o-sub        { font-size:13px; color:var(–muted); margin-top:3px; }
+
+.streak-card  { background:var(–surf); border:1px solid var(–border); border-radius:var(–r); padding:15px 16px; display:flex; align-items:center; gap:13px; }
+.streak-fire  { font-size:34px; }
+.s-num        { font-family:‘Syne’,sans-serif; font-size:28px; font-weight:800; color:var(–yellow); line-height:1; }
+.s-lbl        { font-size:13px; color:var(–muted); margin-top:2px; }
+
+.rp-card      { background:var(–surf); border:1px solid var(–border); border-radius:var(–r); padding:14px; }
+.rp-top       { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+.rp-title     { font-family:‘Syne’,sans-serif; font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; }
+.rp-cnt       { font-family:‘Syne’,sans-serif; font-size:13px; font-weight:700; }
+.rp-bar       { height:5px; background:rgba(255,255,255,.05); border-radius:3px; overflow:hidden; margin-bottom:11px; }
+.rp-fill      { height:100%; border-radius:3px; }
+.flag-grid    { display:flex; flex-wrap:wrap; gap:5px; }
+.fb           { width:32px; height:32px; border-radius:50%; background:var(–surf2); border:1.5px solid var(–border); display:flex; align-items:center; justify-content:center; font-size:17px; line-height:1; overflow:hidden; }
+.fb.done      { border-color:var(–green); background:rgba(79,255,176,.08); }
+.fb.more      { font-family:‘Syne’,sans-serif; font-size:10px; font-weight:700; color:var(–muted); }
+.prog-foot    { padding:8px 14px calc(12px + var(–sab)); flex-shrink:0; }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:calc(90px + var(–sab)); left:50%; transform:translateX(-50%) translateY(16px); background:var(–surf2); border:1px solid var(–border); border-radius:30px; padding:10px 20px; font-size:14px; font-weight:500; white-space:nowrap; z-index:10000; opacity:0; transition:opacity .28s,transform .28s; pointer-events:none; }
+.toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── CONFETTI ── */
+.cf { position:fixed; top:-16px; border-radius:2px; pointer-events:none; z-index:9998; animation:fall var(–d) ease-in var(–delay) both; }
+@keyframes fall { 0%{transform:translateX(0) rotate(0) translateY(0);opacity:1} 100%{transform:translateX(var(–x)) rotate(720deg) translateY(110vh);opacity:0} }
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HOME ═══════════════ -->
+
+<div class="screen" id="s-home">
+  <div class="home-body">
+    <div class="globe">🌐</div>
+    <div class="t-xl t-acc">GeoQuiz</div>
+    <div class="home-sub">194 Länder · Alle Flaggen der Welt</div>
+    <div class="stats-row">
+      <div class="stat-pill">🔥 <span class="stat-num" id="st-streak">0</span> Tage</div>
+      <div class="stat-pill">✅ <span class="stat-num" id="st-learn">0</span> gelernt</div>
+      <div class="stat-pill">⭐ <span class="stat-num" id="st-pct">0%</span></div>
+    </div>
+  </div>
+  <div class="home-foot">
+    <button class="btn btn-p" id="btn-play">▶ &nbsp;Quiz starten</button>
+    <button class="btn btn-s" id="btn-learn">📖 &nbsp;Lernmodus</button>
+    <button class="btn btn-s" id="btn-progress">📊 &nbsp;Mein Fortschritt</button>
+  </div>
+</div>
+
+<!-- ═══════════════ REGION ═══════════════ -->
+
+<div class="screen" id="s-region">
+  <div class="sh">
+    <div class="back" id="btn-back-reg">‹ Zurück</div>
+    <div class="t-lg">Region <span style="color:var(--green)">wählen</span></div>
+  </div>
+  <div class="mode-row">
+    <div class="label" style="margin-bottom:7px">Spielmodus</div>
+    <div class="mode-chips" id="mode-chips"></div>
+  </div>
+  <div style="height:10px;flex-shrink:0"></div>
+  <div class="label" style="padding:0 16px 7px">Region</div>
+  <div class="region-scroll" id="region-cards"></div>
+  <div class="region-foot">
+    <button class="btn btn-p" id="btn-go">Los geht's →</button>
+  </div>
+</div>
+
+<!-- ═══════════════ QUIZ ═══════════════ -->
+
+<div class="screen" id="s-quiz">
+  <div class="quiz-top">
+    <div class="quiz-row">
+      <div class="badge" id="badge">🏳️ Flagge → Land</div>
+      <div class="q-counter"><strong id="q-cur">1</strong><span id="q-tot"> / 20</span></div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="quiz-body">
+    <div class="q-prompt" id="q-prompt">Welches Land gehört zu dieser Flagge?</div>
+    <div class="flag-box" id="flag-box">🏳️</div>
+    <div class="name-box" id="name-box" style="display:none"></div>
+    <div class="hint-row">
+      <button class="hint-btn" id="btn-hint">💡 Tipp (3 übrig)</button>
+      <span class="hint-txt" id="hint-txt"></span>
+    </div>
+  </div>
+  <div class="ans-area">
+    <div class="inp-wrap">
+      <input class="ans-inp" id="inp" type="text" placeholder="Land eingeben …"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button class="sub-btn" id="btn-submit">→</button>
+    </div>
+    <div class="ac-list" id="ac"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ RESULT ═══════════════ -->
+
+<div class="screen res-glow-g" id="s-result">
+  <div class="res-body">
+    <div class="res-icon" id="res-icon">🎉</div>
+    <div class="res-label g" id="res-lbl">Richtig!</div>
+    <div class="country-card">
+      <div class="cc-flag" id="res-flag">🇩🇪</div>
+      <div>
+        <div class="cc-name" id="res-name">Deutschland</div>
+        <div class="cc-fact">🏛️ <strong id="res-capital">Berlin</strong></div>
+        <div class="cc-fact">🌍 <strong id="res-region">Europa</strong></div>
+      </div>
+    </div>
+    <div class="wrong-box" id="wrong-box" style="display:none">
+      <span id="correct-ans"></span>
+    </div>
+    <div class="streak-badge" id="streak-badge" style="display:none">
+      🔥 &nbsp;<span id="streak-n">0</span> richtig in Folge!
+    </div>
+  </div>
+  <div class="res-foot">
+    <button class="btn btn-p" id="btn-next">Weiter →</button>
+    <button class="btn btn-d" id="btn-repeat" style="display:none">📌 Zum Üben merken</button>
+  </div>
+</div>
+
+<!-- ═══════════════ LEARN ═══════════════ -->
+
+<div class="screen" id="s-learn">
+  <div class="sh">
+    <div class="back" id="btn-back-learn">‹ Zurück</div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="t-lg">Lernen</div>
+      <div class="label" id="learn-ctr">1 / 194</div>
+    </div>
+  </div>
+  <div class="learn-card">
+    <div class="learn-flag" id="learn-flag">🏳️</div>
+    <div class="learn-name" id="learn-name">Lade…</div>
+    <div class="learn-facts">
+      <div class="lf-row">
+        <div class="lf-icon">🏛️</div>
+        <div><div class="lf-lbl">Hauptstadt</div><div class="lf-val" id="learn-capital">–</div></div>
+      </div>
+      <div class="lf-row">
+        <div class="lf-icon">🌍</div>
+        <div><div class="lf-lbl">Region</div><div class="lf-val" id="learn-region">–</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="learn-foot">
+    <button class="btn btn-no" id="btn-nope">✗ Noch üben</button>
+    <button class="btn btn-ok" id="btn-know">✓ Kenne ich</button>
+  </div>
+</div>
+
+<!-- ═══════════════ PROGRESS ═══════════════ -->
+
+<div class="screen" id="s-progress">
+  <div class="sh">
+    <div class="back" id="btn-back-prog">‹ Zurück</div>
+    <div class="t-lg">Mein <span style="color:var(--green)">Fortschritt</span></div>
+  </div>
+  <div class="prog-scroll">
+    <div class="overall-card">
+      <div class="o-ring" id="o-ring" style="--p:0%">
+        <div class="o-num" id="o-num">0%</div>
+      </div>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">Gesamt</div>
+        <div class="o-sub" id="o-sub">0 von 194 Ländern</div>
+      </div>
+    </div>
+    <div class="streak-card">
+      <div class="streak-fire">🔥</div>
+      <div>
+        <div class="s-num" id="s-num">0</div>
+        <div class="s-lbl">Tage in Folge gespielt</div>
+      </div>
+    </div>
+    <div id="rp-list"></div>
+  </div>
+  <div class="prog-foot">
+    <button class="btn btn-g" id="btn-reset">🗑 Fortschritt zurücksetzen</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   GeoQuiz PWA  –  app.js
+   All logic in one file, no build step needed
+═══════════════════════════════════════════ */
+
+'use strict';
+
+// ── Constants ────────────────────────────────────────────────
+const REGIONS = {
+  Europa:      { emoji:'🌍', color:'#4fffb0' },
+  Asien:       { emoji:'🌏', color:'#4db8ff' },
+  Afrika:      { emoji:'🌍', color:'#ffd93d' },
+  Nordamerika: { emoji:'🌎', color:'#ff6b9d' },
+  Südamerika:  { emoji:'🌎', color:'#c77dff' },
+  Ozeanien:    { emoji:'🌊', color:'#ff9f43' },
+};
+
+const MODES = {
+  FLAG:    'flag',     // show flag → type country name
+  CAPITAL: 'capital',  // show flag → type capital
+  MIXED:   'mixed',    // random mix
+};
+
+// ── State ────────────────────────────────────────────────────
+let countries     = [];
+let quiz          = null;   // { pool, queue, index, correct, wrong, repeatQ }
+let curMode       = MODES.FLAG;
+let curQMode      = MODES.FLAG;  // actual mode for current question
+let selRegion     = 'Europa';
+let selModes      = [MODES.FLAG];
+let answered      = false;
+let hintCount     = 3;
+let hintUsed      = false;
+let learnPool     = [];
+let learnIdx      = 0;
+
+// ── Storage helpers ──────────────────────────────────────────
+const LS = {
+  get mastered() { try { return new Set(JSON.parse(localStorage.getItem('gq_m')||'[]')); } catch{return new Set();} },
+  addMastered(code) { const s=this.mastered; s.add(code); localStorage.setItem('gq_m',JSON.stringify([...s])); },
+  delMastered(code) { const s=this.mastered; s.delete(code); localStorage.setItem('gq_m',JSON.stringify([...s])); },
+  get wrong() { try{return JSON.parse(localStorage.getItem('gq_w')||'{}');}catch{return{};} },
+  addWrong(code) { const w=this.wrong; w[code]=(w[code]||0)+1; localStorage.setItem('gq_w',JSON.stringify(w)); },
+  clrWrong(code) { const w=this.wrong; delete w[code]; localStorage.setItem('gq_w',JSON.stringify(w)); },
+  get streak() { try{return JSON.parse(localStorage.getItem('gq_s')||'{"n":0,"d":null}');}catch{return{n:0,d:null};} },
+  tickStreak() {
+    const today=new Date().toDateString(), s=this.streak;
+    if(s.d===today) return s.n;
+    s.n = s.d===new Date(Date.now()-86400000).toDateString() ? s.n+1 : 1;
+    s.d = today;
+    localStorage.setItem('gq_s',JSON.stringify(s));
+    return s.n;
+  },
+  resetAll() { ['gq_m','gq_w','gq_s'].forEach(k=>localStorage.removeItem(k)); },
+};
+
+// ── DOM shortcut ─────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const el = (tag,cls,html='') => { const e=document.createElement(tag); e.className=cls; e.innerHTML=html; return e; };
+
+// ── Screens ──────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => {
+    if (s.classList.contains('active')) {
+      s.classList.add('out');
+      setTimeout(() => s.classList.remove('active','out'), 280);
+    }
+  });
+  const t = $(id);
+  t.style.transform = 'translateX(24px)';
+  setTimeout(() => {
+    t.classList.add('active');
+    t.style.transform = '';
+  }, 10);
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  countries = [{"name":"Afghanistan","capital":"Kabul","flag":"🇦🇫","region":"Asien"},{"name":"Albanien","capital":"Tirana","flag":"🇦🇱","region":"Europa"},{"name":"Algerien","capital":"Algier","flag":"🇩🇿","region":"Afrika"},{"name":"Andorra","capital":"Andorra la Vella","flag":"🇦🇩","region":"Europa"},{"name":"Angola","capital":"Luanda","flag":"🇦🇴","region":"Afrika"},{"name":"Antigua und Barbuda","capital":"Saint John's","flag":"🇦🇬","region":"Nordamerika"},{"name":"Argentinien","capital":"Buenos Aires","flag":"🇦🇷","region":"Südamerika"},{"name":"Armenien","capital":"Jerewan","flag":"🇦🇲","region":"Asien"},{"name":"Australien","capital":"Canberra","flag":"🇦🇺","region":"Ozeanien"},{"name":"Österreich","capital":"Wien","flag":"🇦🇹","region":"Europa"},{"name":"Aserbaidschan","capital":"Baku","flag":"🇦🇿","region":"Asien"},{"name":"Bahamas","capital":"Nassau","flag":"🇧🇸","region":"Nordamerika"},{"name":"Bahrain","capital":"Manama","flag":"🇧🇭","region":"Asien"},{"name":"Bangladesch","capital":"Dhaka","flag":"🇧🇩","region":"Asien"},{"name":"Barbados","capital":"Bridgetown","flag":"🇧🇧","region":"Nordamerika"},{"name":"Weißrussland","capital":"Minsk","flag":"🇧🇾","region":"Europa"},{"name":"Belgien","capital":"Brüssel","flag":"🇧🇪","region":"Europa"},{"name":"Belize","capital":"Belmopan","flag":"🇧🇿","region":"Nordamerika"},{"name":"Benin","capital":"Porto-Novo","flag":"🇧🇯","region":"Afrika"},{"name":"Bhutan","capital":"Thimphu","flag":"🇧🇹","region":"Asien"},{"name":"Bolivien","capital":"Sucre","flag":"🇧🇴","region":"Südamerika"},{"name":"Bosnien und Herzegowina","capital":"Sarajevo","flag":"🇧🇦","region":"Europa"},{"name":"Botswana","capital":"Gaborone","flag":"🇧🇼","region":"Afrika"},{"name":"Brasilien","capital":"Brasília","flag":"🇧🇷","region":"Südamerika"},{"name":"Brunei","capital":"Bandar Seri Begawan","flag":"🇧🇳","region":"Asien"},{"name":"Bulgarien","capital":"Sofia","flag":"🇧🇬","region":"Europa"},{"name":"Burkina Faso","capital":"Ouagadougou","flag":"🇧🇫","region":"Afrika"},{"name":"Burundi","capital":"Gitega","flag":"🇧🇮","region":"Afrika"},{"name":"Kambodscha","capital":"Phnom Penh","flag":"🇰🇭","region":"Asien"},{"name":"Kamerun","capital":"Yaoundé","flag":"🇨🇲","region":"Afrika"},{"name":"Kanada","capital":"Ottawa","flag":"🇨🇦","region":"Nordamerika"},{"name":"Kap Verde","capital":"Praia","flag":"🇨🇻","region":"Afrika"},{"name":"Zentralafrikanische Republik","capital":"Bangui","flag":"🇨🇫","region":"Afrika"},{"name":"Tschad","capital":"N'Djamena","flag":"🇹🇩","region":"Afrika"},{"name":"Chile","capital":"Santiago","flag":"🇨🇱","region":"Südamerika"},{"name":"China","capital":"Peking","flag":"🇨🇳","region":"Asien"},{"name":"Kolumbien","capital":"Bogotá","flag":"🇨🇴","region":"Südamerika"},{"name":"Komoren","capital":"Moroni","flag":"🇰🇲","region":"Afrika"},{"name":"Kongo","capital":"Brazzaville","flag":"🇨🇬","region":"Afrika"},{"name":"Dem. Republik Kongo","capital":"Kinshasa","flag":"🇨🇩","region":"Afrika"},{"name":"Costa Rica","capital":"San José","flag":"🇨🇷","region":"Nordamerika"},{"name":"Kroatien","capital":"Zagreb","flag":"🇭🇷","region":"Europa"},{"name":"Kuba","capital":"Havanna","flag":"🇨🇺","region":"Nordamerika"},{"name":"Zypern","capital":"Nikosia","flag":"🇨🇾","region":"Europa"},{"name":"Tschechien","capital":"Prag","flag":"🇨🇿","region":"Europa"},{"name":"Dänemark","capital":"Kopenhagen","flag":"🇩🇰","region":"Europa"},{"name":"Dschibuti","capital":"Dschibuti","flag":"🇩🇯","region":"Afrika"},{"name":"Dominica","capital":"Roseau","flag":"🇩🇲","region":"Nordamerika"},{"name":"Dominikanische Republik","capital":"Santo Domingo","flag":"🇩🇴","region":"Nordamerika"},{"name":"Ecuador","capital":"Quito","flag":"🇪🇨","region":"Südamerika"},{"name":"Ägypten","capital":"Kairo","flag":"🇪🇬","region":"Afrika"},{"name":"El Salvador","capital":"San Salvador","flag":"🇸🇻","region":"Nordamerika"},{"name":"Äquatorialguinea","capital":"Malabo","flag":"🇬🇶","region":"Afrika"},{"name":"Eritrea","capital":"Asmara","flag":"🇪🇷","region":"Afrika"},{"name":"Estland","capital":"Tallinn","flag":"🇪🇪","region":"Europa"},{"name":"Eswatini","capital":"Mbabane","flag":"🇸🇿","region":"Afrika"},{"name":"Äthiopien","capital":"Addis Abeba","flag":"🇪🇹","region":"Afrika"},{"name":"Fidschi","capital":"Suva","flag":"🇫🇯","region":"Ozeanien"},{"name":"Finnland","capital":"Helsinki","flag":"🇫🇮","region":"Europa"},{"name":"Frankreich","capital":"Paris","flag":"🇫🇷","region":"Europa"},{"name":"Gabun","capital":"Libreville","flag":"🇬🇦","region":"Afrika"},{"name":"Gambia","capital":"Banjul","flag":"🇬🇲","region":"Afrika"},{"name":"Georgien","capital":"Tiflis","flag":"🇬🇪","region":"Asien"},{"name":"Deutschland","capital":"Berlin","flag":"🇩🇪","region":"Europa"},{"name":"Ghana","capital":"Accra","flag":"🇬🇭","region":"Afrika"},{"name":"Griechenland","capital":"Athen","flag":"🇬🇷","region":"Europa"},{"name":"Grenada","capital":"Saint George's","flag":"🇬🇩","region":"Nordamerika"},{"name":"Guatemala","capital":"Guatemala-Stadt","flag":"🇬🇹","region":"Nordamerika"},{"name":"Guinea","capital":"Conakry","flag":"🇬🇳","region":"Afrika"},{"name":"Guinea-Bissau","capital":"Bissau","flag":"🇬🇼","region":"Afrika"},{"name":"Guyana","capital":"Georgetown","flag":"🇬🇾","region":"Südamerika"},{"name":"Haiti","capital":"Port-au-Prince","flag":"🇭🇹","region":"Nordamerika"},{"name":"Honduras","capital":"Tegucigalpa","flag":"🇭🇳","region":"Nordamerika"},{"name":"Ungarn","capital":"Budapest","flag":"🇭🇺","region":"Europa"},{"name":"Island","capital":"Reykjavík","flag":"🇮🇸","region":"Europa"},{"name":"Indien","capital":"Neu-Delhi","flag":"🇮🇳","region":"Asien"},{"name":"Indonesien","capital":"Jakarta","flag":"🇮🇩","region":"Asien"},{"name":"Iran","capital":"Teheran","flag":"🇮🇷","region":"Asien"},{"name":"Irak","capital":"Bagdad","flag":"🇮🇶","region":"Asien"},{"name":"Irland","capital":"Dublin","flag":"🇮🇪","region":"Europa"},{"name":"Israel","capital":"Jerusalem","flag":"🇮🇱","region":"Asien"},{"name":"Italien","capital":"Rom","flag":"🇮🇹","region":"Europa"},{"name":"Jamaika","capital":"Kingston","flag":"🇯🇲","region":"Nordamerika"},{"name":"Japan","capital":"Tokio","flag":"🇯🇵","region":"Asien"},{"name":"Jordanien","capital":"Amman","flag":"🇯🇴","region":"Asien"},{"name":"Kasachstan","capital":"Astana","flag":"🇰🇿","region":"Asien"},{"name":"Kenia","capital":"Nairobi","flag":"🇰🇪","region":"Afrika"},{"name":"Kiribati","capital":"Tarawa","flag":"🇰🇮","region":"Ozeanien"},{"name":"Kuwait","capital":"Kuwait-Stadt","flag":"🇰🇼","region":"Asien"},{"name":"Kirgisistan","capital":"Bischkek","flag":"🇰🇬","region":"Asien"},{"name":"Laos","capital":"Vientiane","flag":"🇱🇦","region":"Asien"},{"name":"Lettland","capital":"Riga","flag":"🇱🇻","region":"Europa"},{"name":"Libanon","capital":"Beirut","flag":"🇱🇧","region":"Asien"},{"name":"Lesotho","capital":"Maseru","flag":"🇱🇸","region":"Afrika"},{"name":"Liberia","capital":"Monrovia","flag":"🇱🇷","region":"Afrika"},{"name":"Libyen","capital":"Tripolis","flag":"🇱🇾","region":"Afrika"},{"name":"Liechtenstein","capital":"Vaduz","flag":"🇱🇮","region":"Europa"},{"name":"Litauen","capital":"Vilnius","flag":"🇱🇹","region":"Europa"},{"name":"Luxemburg","capital":"Luxemburg","flag":"🇱🇺","region":"Europa"},{"name":"Madagaskar","capital":"Antananarivo","flag":"🇲🇬","region":"Afrika"},{"name":"Malawi","capital":"Lilongwe","flag":"🇲🇼","region":"Afrika"},{"name":"Malaysia","capital":"Kuala Lumpur","flag":"🇲🇾","region":"Asien"},{"name":"Malediven","capital":"Malé","flag":"🇲🇻","region":"Asien"},{"name":"Mali","capital":"Bamako","flag":"🇲🇱","region":"Afrika"},{"name":"Malta","capital":"Valletta","flag":"🇲🇹","region":"Europa"},{"name":"Marshallinseln","capital":"Majuro","flag":"🇲🇭","region":"Ozeanien"},{"name":"Mauretanien","capital":"Nouakchott","flag":"🇲🇷","region":"Afrika"},{"name":"Mauritius","capital":"Port Louis","flag":"🇲🇺","region":"Afrika"},{"name":"Mexiko","capital":"Mexiko-Stadt","flag":"🇲🇽","region":"Nordamerika"},{"name":"Mikronesien","capital":"Palikir","flag":"🇫🇲","region":"Ozeanien"},{"name":"Moldau","capital":"Chișinău","flag":"🇲🇩","region":"Europa"},{"name":"Monaco","capital":"Monaco","flag":"🇲🇨","region":"Europa"},{"name":"Mongolei","capital":"Ulaanbaatar","flag":"🇲🇳","region":"Asien"},{"name":"Montenegro","capital":"Podgorica","flag":"🇲🇪","region":"Europa"},{"name":"Marokko","capital":"Rabat","flag":"🇲🇦","region":"Afrika"},{"name":"Mosambik","capital":"Maputo","flag":"🇲🇿","region":"Afrika"},{"name":"Myanmar","capital":"Naypyidaw","flag":"🇲🇲","region":"Asien"},{"name":"Namibia","capital":"Windhoek","flag":"🇳🇦","region":"Afrika"},{"name":"Nauru","capital":"Yaren","flag":"🇳🇷","region":"Ozeanien"},{"name":"Nepal","capital":"Kathmandu","flag":"🇳🇵","region":"Asien"},{"name":"Niederlande","capital":"Amsterdam","flag":"🇳🇱","region":"Europa"},{"name":"Neuseeland","capital":"Wellington","flag":"🇳🇿","region":"Ozeanien"},{"name":"Nicaragua","capital":"Managua","flag":"🇳🇮","region":"Nordamerika"},{"name":"Niger","capital":"Niamey","flag":"🇳🇪","region":"Afrika"},{"name":"Nigeria","capital":"Abuja","flag":"🇳🇬","region":"Afrika"},{"name":"Nordkorea","capital":"Pjöngjang","flag":"🇰🇵","region":"Asien"},{"name":"Nordmazedonien","capital":"Skopje","flag":"🇲🇰","region":"Europa"},{"name":"Norwegen","capital":"Oslo","flag":"🇳🇴","region":"Europa"},{"name":"Oman","capital":"Maskat","flag":"🇴🇲","region":"Asien"},{"name":"Pakistan","capital":"Islamabad","flag":"🇵🇰","region":"Asien"},{"name":"Palau","capital":"Ngerulmud","flag":"🇵🇼","region":"Ozeanien"},{"name":"Panama","capital":"Panama-Stadt","flag":"🇵🇦","region":"Nordamerika"},{"name":"Papua-Neuguinea","capital":"Port Moresby","flag":"🇵🇬","region":"Ozeanien"},{"name":"Paraguay","capital":"Asunción","flag":"🇵🇾","region":"Südamerika"},{"name":"Peru","capital":"Lima","flag":"🇵🇪","region":"Südamerika"},{"name":"Philippinen","capital":"Manila","flag":"🇵🇭","region":"Asien"},{"name":"Polen","capital":"Warschau","flag":"🇵🇱","region":"Europa"},{"name":"Portugal","capital":"Lissabon","flag":"🇵🇹","region":"Europa"},{"name":"Katar","capital":"Doha","flag":"🇶🇦","region":"Asien"},{"name":"Rumänien","capital":"Bukarest","flag":"🇷🇴","region":"Europa"},{"name":"Russland","capital":"Moskau","flag":"🇷🇺","region":"Europa"},{"name":"Ruanda","capital":"Kigali","flag":"🇷🇼","region":"Afrika"},{"name":"Saint Kitts und Nevis","capital":"Basseterre","flag":"🇰🇳","region":"Nordamerika"},{"name":"Saint Lucia","capital":"Castries","flag":"🇱🇨","region":"Nordamerika"},{"name":"Saint Vincent","capital":"Kingstown","flag":"🇻🇨","region":"Nordamerika"},{"name":"Samoa","capital":"Apia","flag":"🇼🇸","region":"Ozeanien"},{"name":"San Marino","capital":"San Marino","flag":"🇸🇲","region":"Europa"},{"name":"São Tomé und Príncipe","capital":"São Tomé","flag":"🇸🇹","region":"Afrika"},{"name":"Saudi-Arabien","capital":"Riad","flag":"🇸🇦","region":"Asien"},{"name":"Senegal","capital":"Dakar","flag":"🇸🇳","region":"Afrika"},{"name":"Serbien","capital":"Belgrad","flag":"🇷🇸","region":"Europa"},{"name":"Seychellen","capital":"Victoria","flag":"🇸🇨","region":"Afrika"},{"name":"Sierra Leone","capital":"Freetown","flag":"🇸🇱","region":"Afrika"},{"name":"Singapur","capital":"Singapur","flag":"🇸🇬","region":"Asien"},{"name":"Slowakei","capital":"Bratislava","flag":"🇸🇰","region":"Europa"},{"name":"Slowenien","capital":"Ljubljana","flag":"🇸🇮","region":"Europa"},{"name":"Salomonen","capital":"Honiara","flag":"🇸🇧","region":"Ozeanien"},{"name":"Somalia","capital":"Mogadischu","flag":"🇸🇴","region":"Afrika"},{"name":"Südafrika","capital":"Pretoria","flag":"🇿🇦","region":"Afrika"},{"name":"Südkorea","capital":"Seoul","flag":"🇰🇷","region":"Asien"},{"name":"Südsudan","capital":"Juba","flag":"🇸🇸","region":"Afrika"},{"name":"Spanien","capital":"Madrid","flag":"🇪🇸","region":"Europa"},{"name":"Sri Lanka","capital":"Colombo","flag":"🇱🇰","region":"Asien"},{"name":"Sudan","capital":"Khartum","flag":"🇸🇩","region":"Afrika"},{"name":"Suriname","capital":"Paramaribo","flag":"🇸🇷","region":"Südamerika"},{"name":"Schweden","capital":"Stockholm","flag":"🇸🇪","region":"Europa"},{"name":"Schweiz","capital":"Bern","flag":"🇨🇭","region":"Europa"},{"name":"Syrien","capital":"Damaskus","flag":"🇸🇾","region":"Asien"},{"name":"Taiwan","capital":"Taipeh","flag":"🇹🇼","region":"Asien"},{"name":"Tadschikistan","capital":"Duschanbe","flag":"🇹🇯","region":"Asien"},{"name":"Tansania","capital":"Dodoma","flag":"🇹🇿","region":"Afrika"},{"name":"Thailand","capital":"Bangkok","flag":"🇹🇭","region":"Asien"},{"name":"Timor-Leste","capital":"Dili","flag":"🇹🇱","region":"Asien"},{"name":"Togo","capital":"Lomé","flag":"🇹🇬","region":"Afrika"},{"name":"Tonga","capital":"Nukualofa","flag":"🇹🇴","region":"Ozeanien"},{"name":"Trinidad und Tobago","capital":"Port of Spain","flag":"🇹🇹","region":"Nordamerika"},{"name":"Tunesien","capital":"Tunis","flag":"🇹🇳","region":"Afrika"},{"name":"Türkei","capital":"Ankara","flag":"🇹🇷","region":"Asien"},{"name":"Turkmenistan","capital":"Aschgabat","flag":"🇹🇲","region":"Asien"},{"name":"Tuvalu","capital":"Funafuti","flag":"🇹🇻","region":"Ozeanien"},{"name":"Uganda","capital":"Kampala","flag":"🇺🇬","region":"Afrika"},{"name":"Ukraine","capital":"Kiew","flag":"🇺🇦","region":"Europa"},{"name":"Vereinigte Arabische Emirate","capital":"Abu Dhabi","flag":"🇦🇪","region":"Asien"},{"name":"Vereinigtes Königreich","capital":"London","flag":"🇬🇧","region":"Europa"},{"name":"USA","capital":"Washington D.C.","flag":"🇺🇸","region":"Nordamerika"},{"name":"Uruguay","capital":"Montevideo","flag":"🇺🇾","region":"Südamerika"},{"name":"Usbekistan","capital":"Taschkent","flag":"🇺🇿","region":"Asien"},{"name":"Vanuatu","capital":"Port Vila","flag":"🇻🇺","region":"Ozeanien"},{"name":"Vatikanstadt","capital":"Vatikanstadt","flag":"🇻🇦","region":"Europa"},{"name":"Venezuela","capital":"Caracas","flag":"🇻🇪","region":"Südamerika"},{"name":"Vietnam","capital":"Hanoi","flag":"🇻🇳","region":"Asien"},{"name":"Jemen","capital":"Sanaa","flag":"🇾🇪","region":"Asien"},{"name":"Sambia","capital":"Lusaka","flag":"🇿🇲","region":"Afrika"},{"name":"Simbabwe","capital":"Harare","flag":"🇿🇼","region":"Afrika"}];
+  LS.tickStreak();
+  renderHome();
+  show('s-home');
+  bindAll();
+
+  // PWA offline: single-file version, SW not needed
+  if ('serviceWorker' in navigator) {
+    try {
+      // Register inline SW for offline caching
+      const swCode = `
+        const C='gq1';
+        self.addEventListener('install',e=>{self.skipWaiting();});
+        self.addEventListener('activate',e=>{self.clients.claim();});
+        self.addEventListener('fetch',e=>{
+          e.respondWith(caches.open(C).then(cache=>
+            cache.match(e.request).then(r=>r||fetch(e.request).then(res=>{cache.put(e.request,res.clone());return res;}))
+          ));
+        });
+      `;
+      const blob = new Blob([swCode], {type:'application/javascript'});
+      const url  = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url).catch(()=>{});
+    } catch(e) {}
+  }
+});
+
+// ── Bind all events once ─────────────────────────────────────
+function bindAll() {
+
+  // Home
+  $('btn-play').onclick    = () => { buildRegionScreen(); show('s-region'); };
+  $('btn-learn').onclick   = startLearn;
+  $('btn-progress').onclick= () => { buildProgressScreen(); show('s-progress'); };
+
+  // Region
+  $('btn-back-reg').onclick = () => show('s-home');
+  $('btn-go').onclick       = startQuiz;
+
+  // Quiz
+  $('btn-submit').onclick   = submitAnswer;
+  $('inp').addEventListener('keyup', e => { if(e.key==='Enter') submitAnswer(); else updateAC(); });
+  $('inp').addEventListener('input', updateAC);
+  $('btn-hint').onclick     = doHint;
+
+  // Result
+  $('btn-next').onclick       = nextQ;
+  $('btn-repeat').onclick     = () => { if(quiz?.cur) { LS.addWrong(quiz.cur.name); toast('Zum Üben gespeichert 📌'); } nextQ(); };
+
+  // Autocomplete (delegation)
+  $('ac').addEventListener('click', e => {
+    const item = e.target.closest('.ac-item');
+    if (!item) return;
+    $('inp').value = item.dataset.name;
+    $('ac').style.display = 'none';
+    submitAnswer();
+  });
+
+  // Learn
+  $('btn-back-learn').onclick  = () => show('s-home');
+  $('btn-know').onclick        = () => { LS.addMastered(learnPool[learnIdx]?.name); learnNext(); };
+  $('btn-nope').onclick        = () => { LS.delMastered(learnPool[learnIdx]?.name); learnNext(); };
+
+  // Progress
+  $('btn-back-prog').onclick = () => show('s-home');
+  $('btn-reset').onclick     = () => {
+    if (confirm('Wirklich alles zurücksetzen?')) { LS.resetAll(); buildProgressScreen(); toast('Zurückgesetzt ✓'); }
+  };
+}
+
+// ═══════════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════════
+function renderHome() {
+  const m = LS.mastered;
+  const s = LS.streak;
+  $('st-streak').textContent  = s.n||0;
+  $('st-learn').textContent   = m.size;
+  $('st-pct').textContent     = countries.length ? Math.round(m.size/countries.length*100)+'%' : '0%';
+}
+
+// ═══════════════════════════════════════════════════
+//  REGION SELECT
+// ═══════════════════════════════════════════════════
+function buildRegionScreen() {
+  const mastered = LS.mastered;
+
+  // Mode chips
+  const modeBox = $('mode-chips');
+  modeBox.innerHTML = '';
+  [
+    [MODES.FLAG,    '🏳️ Flagge → Land'],
+    [MODES.CAPITAL, '🏛️ Hauptstadt'],
+    [MODES.MIXED,   '🎲 Gemischt'],
+  ].forEach(([id,lbl]) => {
+    const c = el('div','chip'+(selModes.includes(id)?' sel':''),lbl);
+    c.onclick = () => {
+      if (selModes.includes(id)) { if(selModes.length>1) selModes=selModes.filter(x=>x!==id); }
+      else selModes=[...selModes,id];
+      buildRegionScreen();
+    };
+    modeBox.appendChild(c);
+  });
+
+  // Region cards
+  const box = $('region-cards');
+  box.innerHTML = '';
+
+  const entries = [
+    ...Object.entries(REGIONS).map(([n,v])=>({name:n,...v})),
+    { name:'Alle', emoji:'🌐', color:'#ffd93d', world:true },
+  ];
+
+  entries.forEach(r => {
+    const pool = r.name==='Alle' ? countries : countries.filter(c=>c.region===r.name);
+    const done = pool.filter(c=>mastered.has(c.name)).length;
+    const pct  = pool.length ? Math.round(done/pool.length*100) : 0;
+    const sel  = selRegion===r.name;
+
+    const card = el('div', `rc${r.world?' world':''}${sel?' sel':''}`);
+    card.innerHTML = `
+      <div class="rc-emoji">${r.emoji}</div>
+      <div class="rc-info">
+        <div class="rc-name" style="color:${sel?r.color:''}">${r.name}</div>
+        <div class="rc-sub">${pool.length} Länder · ${done} gelernt</div>
+        <div class="rc-bar"><div class="rc-fill" style="width:${pct}%;background:${r.color}"></div></div>
+      </div>
+      <div class="rc-chk" style="${sel?`background:${r.color};border-color:${r.color};color:#000`:''}">✓</div>
+    `;
+    card.onclick = () => { selRegion=r.name; buildRegionScreen(); };
+    box.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  QUIZ ENGINE
+// ═══════════════════════════════════════════════════
+function shuffle(arr) {
+  for (let i=arr.length-1;i>0;i--) { const j=0|Math.random()*(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+
+function startQuiz() {
+  const pool = selRegion==='Alle' ? [...countries] : countries.filter(c=>c.region===selRegion);
+  const mode = selModes.includes(MODES.MIXED) ? MODES.MIXED : selModes[0];
+
+  quiz = {
+    pool,
+    queue:   shuffle([...pool]),
+    repeatQ: [],
+    index:   0,
+    correct: 0,
+    wrong:   0,
+    mode,
+    get cur() { return this.index < this.queue.length ? this.queue[this.index] : null; },
+    get total(){ return this.queue.length; },
+    get done() { return this.index >= this.queue.length; },
+  };
+  hintCount = 3;
+  show('s-quiz');
+  renderQ();
+}
+
+function pickQMode() {
+  if (quiz.mode !== MODES.MIXED) return quiz.mode;
+  return Math.random()<.5 ? MODES.FLAG : MODES.CAPITAL;
+}
+
+function renderQ() {
+  if (!quiz?.cur) return;
+  answered  = false;
+  hintUsed  = false;
+  curQMode  = pickQMode();
+
+  const c = quiz.cur;
+
+  // Reset input
+  const inp = $('inp');
+  inp.value = '';
+  inp.className = 'ans-inp';
+  inp.disabled = false;
+  $('ac').style.display = 'none';
+  $('ac').innerHTML = '';
+  $('hint-txt').style.display = 'none';
+  $('hint-txt').textContent = '';
+
+  // Progress bar
+  $('prog-fill').style.width = (quiz.index/quiz.total*100)+'%';
+  $('q-cur').textContent = quiz.index+1;
+  $('q-tot').textContent = quiz.total;
+
+  // Mode badge
+  $('badge').textContent = curQMode===MODES.CAPITAL ? '🏛️ Hauptstadt' : '🏳️ Flagge → Land';
+
+  // Flag / prompt
+  $('flag-box').style.display  = 'flex';
+  $('name-box').style.display  = 'none';
+  $('flag-box').textContent    = c.flag;
+
+  if (curQMode===MODES.CAPITAL) {
+    $('q-prompt').textContent = `Hauptstadt von ${c.name}?`;
+    inp.placeholder = 'Hauptstadt eingeben …';
+  } else {
+    $('q-prompt').textContent = 'Welches Land gehört zu dieser Flagge?';
+    inp.placeholder = 'Land eingeben …';
+  }
+
+  $('hint-btn').textContent = `💡 Tipp (${hintCount} übrig)`;
+  setTimeout(()=>inp.focus(),300);
+}
+
+function updateAC() {
+  if (answered) return;
+  const q = $('inp').value.trim();
+  const ac = $('ac');
+  if (!q) { ac.style.display='none'; ac.innerHTML=''; return; }
+
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const qn   = norm(q);
+  const pool = selRegion==='Alle' ? countries : countries.filter(c=>c.region===selRegion);
+
+  const hits = pool
+    .filter(c => {
+      const nn = norm(c.name), cap = norm(c.capital);
+      return nn.startsWith(qn)||nn.includes(qn)||cap.startsWith(qn);
+    })
+    .sort((a,b) => {
+      const an=norm(a.name),bn=norm(b.name);
+      return (an.startsWith(qn)?0:1)-(bn.startsWith(qn)?0:1)||an.localeCompare(bn);
+    })
+    .slice(0,4);
+
+  if (!hits.length) { ac.style.display='none'; ac.innerHTML=''; return; }
+
+  ac.style.display = 'block';
+  ac.innerHTML = hits.map(c=>`
+    <div class="ac-item" data-name="${c.name}">
+      <span class="ac-flag">${c.flag}</span>
+      <div class="ac-name">${c.name}</div>
+      <div class="ac-cap">${c.capital}</div>
+    </div>
+  `).join('');
+}
+
+function doHint() {
+  if (hintCount<=0) { toast('Keine Tipps mehr 😕'); return; }
+  if (hintUsed) return;
+  hintUsed = true; hintCount--;
+  const c = quiz.cur;
+  const ans = curQMode===MODES.CAPITAL ? c.capital : c.name;
+  $('hint-txt').textContent = `Beginnt mit „${ans[0].toUpperCase()}"`;
+  $('hint-txt').style.display = 'block';
+  $('hint-btn').textContent = `💡 Tipp (${hintCount} übrig)`;
+}
+
+function normalize(s) {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'');
+}
+
+function submitAnswer() {
+  if (answered || !quiz?.cur) return;
+  const val = $('inp').value.trim();
+  if (!val) return;
+
+  answered = true;
+  const c = quiz.cur;
+  const correct = normalize(val) === normalize(curQMode===MODES.CAPITAL ? c.capital : c.name);
+
+  $('inp').disabled = true;
+  $('inp').classList.add(correct?'ok':'wrong');
+  $('ac').style.display = 'none';
+
+  if (correct) {
+    LS.addMastered(c.name);
+    LS.clrWrong(c.name);
+    quiz.correct++;
+    spawnConfetti();
+  } else {
+    LS.addWrong(c.name);
+    quiz.wrong++;
+    if (quiz.repeatQ) quiz.repeatQ.push(c);
+  }
+  quiz.index++;
+
+  // Merge repeat queue when main queue exhausted
+  if (quiz.done && quiz.repeatQ?.length) {
+    quiz.queue = [...quiz.queue, ...shuffle(quiz.repeatQ)];
+    quiz.repeatQ = [];
+  }
+
+  setTimeout(()=>{ renderResult(correct,c); show('s-result'); }, 560);
+}
+
+function renderResult(correct, c) {
+  $('s-result').className = 'screen '+(correct?'res-glow-g':'res-glow-r');
+  $('res-icon').textContent  = correct?'🎉':'😕';
+  $('res-lbl').textContent   = correct?'Richtig!':'Falsch!';
+  $('res-lbl').className     = 'res-label '+(correct?'g':'r');
+  $('res-flag').textContent  = c.flag;
+  $('res-name').textContent  = c.name;
+  $('res-capital').textContent = c.capital;
+  $('res-region').textContent  = c.region;
+
+  const sk = LS.streak;
+  $('streak-badge').style.display = (correct && sk.n>1) ? 'flex' : 'none';
+  $('streak-n').textContent = sk.n;
+
+  $('wrong-box').style.display   = correct ? 'none' : 'block';
+  $('correct-ans').innerHTML = `Richtige Antwort: <strong>${curQMode===MODES.CAPITAL?c.capital:c.name}</strong>`;
+  $('btn-repeat').style.display = correct?'none':'flex';
+}
+
+function nextQ() {
+  if (!quiz) return;
+  if (quiz.done) { endQuiz(); return; }
+  show('s-quiz');
+  renderQ();
+}
+
+function endQuiz() {
+  const pct = quiz.correct ? Math.round(quiz.correct/(quiz.correct+quiz.wrong)*100) : 0;
+  toast(`Quiz beendet! ${quiz.correct}/${quiz.correct+quiz.wrong} richtig (${pct}%)`);
+  renderHome();
+  show('s-home');
+}
+
+// ═══════════════════════════════════════════════════
+//  LEARN MODE
+// ═══════════════════════════════════════════════════
+function startLearn() {
+  const m = LS.mastered;
+  learnPool = shuffle([
+    ...countries.filter(c=>!m.has(c.name)),
+    ...countries.filter(c=> m.has(c.name)),
+  ]);
+  learnIdx = 0;
+  renderLearn();
+  show('s-learn');
+}
+
+function renderLearn() {
+  if (learnIdx>=learnPool.length) { toast('Alle Länder durch! 🎉'); renderHome(); show('s-home'); return; }
+  const c = learnPool[learnIdx];
+  const m = LS.mastered;
+  $('learn-flag').textContent    = c.flag;
+  $('learn-name').textContent    = c.name;
+  $('learn-capital').textContent = c.capital;
+  $('learn-region').textContent  = c.region;
+  $('learn-ctr').textContent     = `${learnIdx+1} / ${learnPool.length}`;
+  $('btn-know').textContent      = m.has(c.name) ? '✅ Gewusst' : '✓ Kenne ich';
+}
+
+function learnNext() { learnIdx++; renderLearn(); }
+
+// ═══════════════════════════════════════════════════
+//  PROGRESS
+// ═══════════════════════════════════════════════════
+function buildProgressScreen() {
+  const m  = LS.mastered;
+  const sk = LS.streak;
+  const pct = countries.length ? Math.round(m.size/countries.length*100) : 0;
+
+  $('o-num').textContent  = pct+'%';
+  $('o-ring').style.setProperty('--p', pct+'%');
+  $('o-sub').textContent  = `${m.size} von ${countries.length} Ländern`;
+  $('s-num').textContent  = sk.n||0;
+
+  const box = $('rp-list');
+  box.innerHTML = '';
+  const colors = ['#4fffb0','#4db8ff','#ffd93d','#ff6b9d','#c77dff','#ff9f43'];
+
+  Object.entries(REGIONS).forEach(([name,info],i) => {
+    const pool = countries.filter(c=>c.region===name);
+    const done = pool.filter(c=>m.has(c.name));
+    const pctR = pool.length ? Math.round(done.length/pool.length*100) : 0;
+    const col  = colors[i];
+
+    const card = el('div','rp-card');
+    const bubbles = pool.slice(0,9).map(c=>
+      `<div class="fb${m.has(c.name)?' done':''}" title="${c.name}">${c.flag}</div>`
+    ).join('');
+    const more = pool.length-9;
+
+    card.innerHTML = `
+      <div class="rp-top">
+        <div class="rp-title">${info.emoji} ${name}</div>
+        <div class="rp-cnt" style="color:${col}">${done.length} / ${pool.length}</div>
+      </div>
+      <div class="rp-bar"><div class="rp-fill" style="width:${pctR}%;background:${col}"></div></div>
+      <div class="flag-grid">
+        ${bubbles}
+        ${more>0?`<div class="fb more">+${more}</div>`:''}
+      </div>
+    `;
+    box.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 2800);
+}
+
+function spawnConfetti() {
+  const cols = ['#4fffb0','#ffd93d','#ff6b6b','#4db8ff','#c77dff'];
+  for (let i=0;i<20;i++) {
+    const d = document.createElement('div');
+    d.className = 'cf';
+    const size = 6+Math.random()*8;
+    d.style.cssText = `
+      left:${Math.random()*100}vw;
+      width:${size}px; height:${size}px;
+      background:${cols[0|Math.random()*cols.length]};
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      --d:${1.1+Math.random()*1.2}s;
+      --delay:${Math.random()*.35}s;
+      --x:${-60+Math.random()*120}px;
+    `;
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(), 2500);
+  }
+}
+
+</script>
+
+</body>
+</html>
